@@ -2,11 +2,11 @@ package com.sansi.coolweather;
 
 import android.content.SharedPreferences;
 import android.graphics.Color;
-import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -14,6 +14,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.GravityCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.bumptech.glide.Glide;
 import com.sansi.coolweather.gson.Forecast;
@@ -28,6 +31,10 @@ import okhttp3.Callback;
 import okhttp3.Response;
 
 public class WeatherActivity extends AppCompatActivity {
+    public DrawerLayout drawerLayout;
+    public SwipeRefreshLayout refreshLayout;
+    private String mWeatherId;
+
     private ScrollView layoutWeather;
     private LinearLayout layoutForecast;
     private TextView titleCity;
@@ -41,6 +48,7 @@ public class WeatherActivity extends AppCompatActivity {
     private TextView textCarWash;
     private TextView textSport;
     private ImageView bingPicImg;
+    private Button buttonHome;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,19 +74,29 @@ public class WeatherActivity extends AppCompatActivity {
         textCarWash = findViewById(R.id.text_car_wash);
         textSport = findViewById(R.id.text_sport);
         bingPicImg = findViewById(R.id.bing_pic_img);
+        buttonHome = findViewById(R.id.button_home);
+        drawerLayout = findViewById(R.id.drawer_layout);
+        refreshLayout = findViewById(R.id.swipe_refresh);
+        refreshLayout.setColorSchemeResources(R.color.colorPrimary);/*设置下拉刷新进度条的颜色*/
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
 
         String weatherString = sharedPreferences.getString("weather", null);
         if (weatherString != null) {
             //有缓存时直接解析天气数据
             Weather weather = Utility.handleWeatherResponse(weatherString);
+            assert weather != null;
+            mWeatherId = weather.basic.weatherId;
             showWeatherInfo(weather);
         } else {
             //无缓存时去服务器查询天气
-            String weatherId = getIntent().getStringExtra("weather_id");
+            mWeatherId = getIntent().getStringExtra("weather_id");
             layoutWeather.setVisibility(View.INVISIBLE);
-            requestWeather(weatherId);
+            requestWeather(mWeatherId);
         }
+
+        //下拉刷新时更新天气数据
+        refreshLayout.setOnRefreshListener(() -> requestWeather(mWeatherId));
+        buttonHome.setOnClickListener(view -> drawerLayout.openDrawer(GravityCompat.START));
 
         String bing_pic = sharedPreferences.getString("bing_pic", null);
         if (bing_pic != null) {
@@ -97,6 +115,7 @@ public class WeatherActivity extends AppCompatActivity {
                 e.printStackTrace();
                 runOnUiThread(() -> {
                     Toast.makeText(WeatherActivity.this, "未连接网络", Toast.LENGTH_SHORT).show();
+                    refreshLayout.setRefreshing(false);
                 });
             }
 
@@ -109,10 +128,12 @@ public class WeatherActivity extends AppCompatActivity {
                         SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(WeatherActivity.this).edit();
                         editor.putString("weather", responseText);
                         editor.apply();
+                        mWeatherId = weather.basic.weatherId;
                         showWeatherInfo(weather);
                     } else {
                         Toast.makeText(WeatherActivity.this, "获取天气信息失败", Toast.LENGTH_SHORT).show();
                     }
+                    refreshLayout.setRefreshing(false);
                 });
             }
         });
