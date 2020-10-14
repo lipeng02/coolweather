@@ -1,6 +1,7 @@
 package com.sansi.coolweather;
 
 import android.app.ProgressDialog;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -26,6 +27,7 @@ import org.litepal.LitePal;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -87,6 +89,12 @@ public class ChooseAreaFragment extends Fragment {
             } else if (currentLevel == LEVEL_CITY) {
                 selectedCity = cityList.get(i);
                 queryCounties();
+            }else if (currentLevel==LEVEL_COUNTY){
+                String weatherId = countyList.get(i).getWeatherId();
+                Intent intent = new Intent(getActivity(), WeatherActivity.class);
+                intent.putExtra("weather_id",weatherId);
+                startActivity(intent);
+                Objects.requireNonNull(getActivity()).finish();
             }
         });
         buttonBack.setOnClickListener(view -> {
